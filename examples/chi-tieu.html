@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quản lý chi tiêu · Fluxa</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../fluxa.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script src="../dist/fluxa.global.js"></script>
+  <script>
+    // Ứng dụng mẫu 2: quản lý chi tiêu. Dùng: form + rules (kiểm tra dữ liệu), Table (sắp xếp), Progress,
+    // persist, computed. Dữ liệu là mảng object thuần nên lưu/đọc không cần chuyển đổi.
+    const { signal, computed, tags, show, form, rules, persist, createTheme, mount, h, Button, Input, Select, Table, Progress, Alert } = Fluxa;
+    const { div, h1, p, span, button } = tags;
+    const theme = createTheme();
+    const money = (n) => new Intl.NumberFormat("vi-VN").format(n) + " đ";
+    const CATS = ["Ăn uống", "Đi lại", "Mua sắm", "Giải trí", "Khác"];
+
+    function App() {
+      const items = persist(signal([]), "vidu-chitieu");
+      const budget = persist(signal(5000000), "vidu-ngansach");
+      const total = computed(() => items().reduce((s, x) => s + x.tien, 0));
+      const percent = computed(() => (budget() > 0 ? (total() / budget()) * 100 : 0));
+
+      // Khai báo luật kiểm tra: [giáTrịBanĐầu, ...luật]. Lỗi chỉ hiện sau khi người dùng sửa hoặc bấm gửi.
+      const f = form({
+        ten: ["", rules.required("Nhập tên khoản chi"), rules.maxLength(60)],
+        tien: ["", rules.required("Nhập số tiền"), rules.number(), rules.min(1, "Số tiền phải lớn hơn 0")],
+        loai: [CATS[0]],
+      });
+      const save = f.submit((v) => {
+        items.set((a) => [...a, { id: Date.now() + Math.random(), ten: v.ten.trim(), tien: Number(v.tien), loai: v.loai, ngay: new Date().toISOString().slice(0, 10) }]);
+        f.reset();
+      });
+
+      return div({ class: "container" },
+        div({ class: "row" },
+          h1(span("Fluxa"), " · Chi tiêu"),
+          button({ class: "btn ghost theme-toggle", "aria-label": "Đổi giao diện sáng/tối", onclick: theme.toggle }, () => (theme.resolved() === "dark" ? "☀" : "🌙")),
+        ),
+        div({ class: "card" },
+          div({ class: "row" },
+            span({ class: "big" }, () => money(total())),
+            span({ class: "muted" }, () => `trên ngân sách ${money(budget())}`),
+          ),
+          div({ class: "mt" }, h(Progress, { value: percent, max: 100, tone: "info", label: "Đã chi so với ngân sách" })),
+          show(() => percent() > 100, () => h(Alert, { tone: "danger", title: "Vượt ngân sách" }, "Bạn đã chi nhiều hơn ngân sách đặt ra.")),
+        ),
+        tags.form({ class: "card", onsubmit: save, novalidate: true },
+          h("h2", null, "Thêm khoản chi"),
+          h(Input, { label: "Tên khoản chi", value: f.ten.value, error: f.ten.error, placeholder: "Ví dụ: Cà phê" }),
+          h(Input, { label: "Số tiền (đ)", type: "number", value: f.tien.value, error: f.tien.error }),
+          h(Select, { label: "Loại", value: f.loai.value, options: CATS }),
+          div({ class: "row mt" }, h(Button, { type: "submit", loading: f.submitting }, "Thêm"),
+            span({ class: "muted" }, () => (f.valid() ? "" : "Còn thiếu thông tin"))),
+        ),
+        h(Table, {
+          caption: "Các khoản đã chi (bấm tiêu đề để sắp xếp)",
+          empty: "Chưa có khoản chi nào.",
+          rows: items,
+          columns: [
+            { key: "ngay", label: "Ngày" },
+            { key: "ten", label: "Khoản chi" },
+            { key: "loai", label: "Loại" },
+            { key: "tien", label: "Số tiền", align: "right", render: (r) => money(r.tien) },
+            { label: "", render: (r) => h(Button, { size: "sm", variant: "ghost", "aria-label": "Xóa " + r.ten, onclick: () => items.set((a) => a.filter((x) => x !== r)) }, "Xóa") },
+          ],
+        }),
+      );
+    }
+    mount("#app", App);
+  </script>
+</body>
+</html>

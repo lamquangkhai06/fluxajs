@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ghi chú · Fluxa</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../fluxa.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script src="../dist/fluxa.global.js"></script>
+  <script>
+    // Ứng dụng mẫu 3: ghi chú. Dùng: createStore + model (sửa trực tiếp), computed (tìm kiếm, sắp xếp),
+    // list, show, Dropdown, Tooltip, persist với revive/save.
+    const { signal, computed, tags, list, show, model, createStore, persist, createTheme, debounced, online, mount, h, Button, Dropdown, Tooltip } = Fluxa;
+    const { div, h1, h2, p, span, button, input, textarea, ul, li } = tags;
+    const theme = createTheme();
+
+    function App() {
+      const mk = (n) => createStore({ id: n.id, title: n.title, body: n.body, pinned: !!n.pinned });
+      const fresh = () => mk({ id: Date.now() + Math.random(), title: "Ghi chú mới", body: "" });
+      const notes = persist(signal([mk({ id: 1, title: "Chào mừng", body: "Gõ vào đây để sửa. Mọi thứ tự lưu trong trình duyệt." })]), "vidu-ghichu", {
+        revive: (raw) => raw.slice(0, 500).map((n) => mk({ id: n.id, title: String(n.title).slice(0, 100), body: String(n.body).slice(0, 20000), pinned: n.pinned })),
+        save: (all) => all.map((n) => ({ id: n.id, title: n.title, body: n.body, pinned: n.pinned })),
+      });
+      const selected = signal(null);
+      const query = signal("");
+      const slowQuery = debounced(query, 200); // chỉ lọc khi người dùng ngừng gõ 0,2 giây
+      const isOnline = online();
+
+      // Tìm kiếm + ghim lên đầu: computed tự chạy lại khi bất kỳ trường nào đổi
+      const shown = computed(() => {
+        const q = slowQuery().trim().toLowerCase();
+        return notes()
+          .filter((n) => !q || (n.title + " " + n.body).toLowerCase().includes(q))
+          .sort((a, b) => Number(b.pinned) - Number(a.pinned));
+      });
+      const current = computed(() => notes().find((n) => n.id === selected()) || null);
+      const add = () => { const n = fresh(); notes.set((a) => [n, ...a]); selected.set(n.id); };
+      const remove = (n) => { notes.set((a) => a.filter((x) => x !== n)); if (selected() === n.id) selected.set(null); };
+
+      const editor = () => {
+        const n = current();
+        if (!n) return p({ class: "muted" }, "Chọn một ghi chú ở bên trái, hoặc tạo ghi chú mới.");
+        return div({ class: "stack" },
+          input({ class: "input", "aria-label": "Tiêu đề", maxlength: 100, value: model(n, "title") }),
+          textarea({ class: "input", "aria-label": "Nội dung", rows: 10, maxlength: 20000, value: model(n, "body") }),
+          div({ class: "row" },
+            h(Tooltip, { text: "Ghim lên đầu danh sách" },
+              button({ class: "btn ghost", onclick: () => (n.pinned = !n.pinned) }, () => (n.pinned ? "Bỏ ghim" : "Ghim"))),
+            h(Dropdown, { label: "Khác", items: [{ label: "Xóa ghi chú", danger: true, onclick: () => remove(n) }] }),
+          ),
+        );
+      };
+
+      return div({ class: "container" },
+        div({ class: "row" },
+          h1(span("Fluxa"), " · Ghi chú"),
+          button({ class: "btn ghost theme-toggle", "aria-label": "Đổi giao diện sáng/tối", onclick: theme.toggle }, () => (theme.resolved() === "dark" ? "☀" : "🌙")),
+        ),
+        div({ class: "card" },
+          div({ class: "row" },
+            input({ class: "input", type: "search", placeholder: "Tìm ghi chú…", "aria-label": "Tìm ghi chú", value: query }),
+            h(Button, { onclick: add }, "+ Ghi chú"),
+          ),
+          div({ class: "row mt" }, span({ class: "badge" }, () => `${shown().length}/${notes().length} ghi chú`),
+            show(() => !isOnline(), () => span({ class: "badge" }, "Đang offline, vẫn lưu được"))),
+          show(() => !shown().length, () => p({ class: "muted" }, "Không có ghi chú phù hợp.")),
+          ul({ class: "plain" },
+            list(shown, (n) =>
+              li(button({ class: () => (selected() === n.id ? "btn" : "btn ghost"), onclick: () => selected.set(n.id) },
+                () => (n.pinned ? "📌 " : "") + (n.title || "(không tiêu đề)")))
+            )
+          ),
+        ),
+        div({ class: "card" }, editor),
+      );
+    }
+    mount("#app", App);
+  </script>
+</body>
+</html>

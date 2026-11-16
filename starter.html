@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ứng dụng Fluxa đầu tiên</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="fluxa.css">
+</head>
+<body>
+  <div id="app"></div>
+
+  <!-- Không cần cài đặt, không cần build: bấm đúp file này là chạy. -->
+  <script src="dist/fluxa.global.js"></script>
+  <script>
+    // Mọi thứ của Fluxa nằm trong biến Fluxa. Lấy ra những gì cần dùng:
+    const { signal, computed, tags, list, show, model, createStore, mount } = Fluxa;
+    const { div, h1, h2, p, span, button, input, ul, li, label } = tags;
+
+    function App() {
+      // signal = một giá trị tự cập nhật giao diện khi đổi. Đọc: count()   Ghi: count.set(...)
+      const count = signal(0);
+      const double = computed(() => count() * 2); // giá trị suy ra, tự tính lại
+
+      // Danh sách việc cần làm: mỗi việc là một store nhỏ { text, done }
+      const newTodo = (text) => createStore({ text, done: false });
+      const todos = signal([newTodo("Thử Fluxa"), newTodo("Sửa file này theo ý bạn")]);
+      const text = signal("");
+
+      const add = () => {
+        if (!text().trim()) return;
+        todos.set((all) => [...all, newTodo(text().trim())]);
+        text.set("");
+      };
+
+      return div({ class: "container" },
+        h1("Fluxa ", span({ class: "badge" }, "bản khởi đầu")),
+
+        div({ class: "card" },
+          h2("Bộ đếm"),
+          div({ class: "row" },
+            button({ class: "btn ghost", onclick: () => count.set((c) => c - 1) }, "−"),
+            span({ class: "big" }, count),
+            button({ class: "btn", onclick: () => count.set((c) => c + 1) }, "+"),
+            span({ class: "badge" }, () => "gấp đôi: " + double()),
+          ),
+        ),
+
+        div({ class: "card" },
+          h2("Việc cần làm"),
+          div({ class: "row" },
+            // truyền signal vào value là tự ràng buộc hai chiều
+            input({ class: "input", placeholder: "Thêm việc rồi nhấn Enter…", value: text,
+                    onkeydown: (e) => e.key === "Enter" && add() }),
+            button({ class: "btn", onclick: add }, "Thêm"),
+          ),
+          // show(điều kiện, hiện-khi-đúng): khỏi viết if / ? :
+          show(() => !todos().length, () => p({ class: "muted" }, "Chưa có việc nào.")),
+          // list(mảng, cách-vẽ-một-mục): khỏi viết vòng lặp
+          ul({ class: "todo" },
+            list(todos, (t) =>
+              li({ class: { done: () => t.done } },   // class nhận object: có điều kiện thì hiện
+                input({ type: "checkbox", checked: model(t, "done") }),
+                label(t.text),
+                button({ class: "btn ghost", onclick: () => todos.set((all) => all.filter((x) => x !== t)) }, "Xóa"),
+              )
+            )
+          ),
+        ),
+      );
+    }
+
+    mount("#app", App);
+  </script>
+</body>
+</html>

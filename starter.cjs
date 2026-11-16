@@ -1,0 +1,31 @@
+// starter.cjs - mở starter.html bằng file:// (như bấm đúp) trên Chromium thật và bấm thử.
+const path = require("path");
+const { chromium } = require("playwright");
+let failed = 0;
+const check = (n, ok, x = "") => { if (!ok) failed++; console.log(ok ? "  ✓" : "  ✗", n, ok ? "" : x); };
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage();
+  const problems = [];
+  page.on("console", (m) => { if (["error", "warning"].includes(m.type())) problems.push(m.text()); });
+  page.on("pageerror", (e) => problems.push(e.message));
+  await page.goto("file://" + path.join(__dirname, "starter.html"));
+  await page.waitForSelector(".big");
+  check("mở bằng file:// chạy được, không cần server", (await page.textContent("h1")).includes("Fluxa"));
+  await page.click(".btn:has-text('+')"); await page.click(".btn:has-text('+')");
+  check("bộ đếm tăng và giá trị suy ra tự tính lại", (await page.textContent(".big")) === "2" && (await page.textContent(".row .badge")).includes("4"));
+  check("hai việc mẫu hiển thị", (await page.$$(".todo li")).length === 2);
+  await page.fill("input.input", "việc của tôi"); await page.press("input.input", "Enter");
+  check("thêm việc bằng Enter, ô nhập tự xóa", (await page.$$(".todo li")).length === 3 && (await page.inputValue("input.input")) === "");
+  await page.check(".todo li:nth-child(3) input[type=checkbox]");
+  check("tick xong thì dòng đó có class done", (await page.getAttribute(".todo li:nth-child(3)", "class")).includes("done"));
+  check("việc khác không bị ảnh hưởng", !(await page.getAttribute(".todo li:nth-child(1)", "class")).includes("done"));
+  await page.fill("input.input", "<img src=x onerror=alert(1)>"); await page.press("input.input", "Enter");
+  check("HTML nhập vào chỉ là chữ", (await page.$$(".todo li img")).length === 0);
+  while ((await page.$$(".todo li")).length) await page.click(".todo li .btn.ghost");
+  check("hết việc thì hiện thông báo trống", (await page.textContent(".card:nth-of-type(2)")).includes("Chưa có việc nào"));
+  check("không có lỗi hay cảnh báo trong console", problems.length === 0, problems.join("; "));
+  await browser.close();
+  console.log(failed ? `\n${failed} kiểm tra THẤT BẠI` : "\nstarter.html chạy đúng");
+  process.exit(failed ? 1 : 0);
+})();

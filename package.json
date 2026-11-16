@@ -1,0 +1,108 @@
+{
+  "name": "fluxa-ui",
+  "version": "0.10.0",
+  "description": "Framework UI siêu nhẹ dựa trên signals: không virtual DOM, không cần build, router, store, form, i18n, dark mode, bộ component, bảo mật theo mặc định",
+  "type": "module",
+  "main": "fluxa.js",
+  "types": "fluxa.d.ts",
+  "exports": {
+    ".": {
+      "types": "./fluxa.d.ts",
+      "default": "./fluxa.js"
+    },
+    "./router": {
+      "types": "./fluxa-router.d.ts",
+      "default": "./fluxa-router.js"
+    },
+    "./extras": {
+      "types": "./fluxa-extras.d.ts",
+      "default": "./fluxa-extras.js"
+    },
+    "./inputs": {
+      "types": "./fluxa-inputs.d.ts",
+      "default": "./fluxa-inputs.js"
+    },
+    "./charts": {
+      "types": "./fluxa-charts.d.ts",
+      "default": "./fluxa-charts.js"
+    },
+    "./ui": {
+      "types": "./fluxa-components.d.ts",
+      "default": "./fluxa-components.js"
+    },
+    "./jsx-runtime": {
+      "types": "./jsx-runtime.d.ts",
+      "default": "./jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./jsx-runtime.d.ts",
+      "default": "./jsx-runtime.js"
+    },
+    "./vite": {
+      "types": "./vite-plugin-fluxa.d.ts",
+      "default": "./vite-plugin-fluxa.js"
+    },
+    "./fluxa.css": "./fluxa.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "fluxa.js",
+    "fluxa.d.ts",
+    "fluxa-router.js",
+    "fluxa-router.d.ts",
+    "fluxa-components.js",
+    "fluxa-components.d.ts",
+    "jsx-runtime.js",
+    "jsx-runtime.d.ts",
+    "vite-plugin-fluxa.js",
+    "vite-plugin-fluxa.d.ts",
+    "fluxa.css",
+    "README.md",
+    "SECURITY.md",
+    "LICENSE",
+    "fluxa-all.js",
+    "dist",
+    "AI.md",
+    "starter.html",
+    "favicon.svg",
+    "brand",
+    "fluxa-extras.js",
+    "fluxa-extras.d.ts",
+    "examples",
+    "README.vi.md",
+    "SECURITY.vi.md",
+    "docs",
+    "fluxa-inputs.js",
+    "fluxa-inputs.d.ts",
+    "fluxa-charts.js",
+    "fluxa-charts.d.ts",
+    "fluxa-lite.js"
+  ],
+  "scripts": {
+    "test": "node test.js && node test-features.js && node test-ui.js && node test-ui2.js && node test-inputs.js && node test-charts.js && node test-extras.js && node test-css.js && node test-ai.js",
+    "test:e2e": "node e2e.cjs",
+    "test:security": "node security.cjs",
+    "start": "npx --yes serve .",
+    "build": "node build.cjs",
+    "test:starter": "node starter.cjs",
+    "test:examples": "node examples.cjs"
+  },
+  "license": "MIT",
+  "sideEffects": false,
+  "keywords": [
+    "ui",
+    "framework",
+    "signals",
+    "reactive",
+    "router",
+    "store",
+    "jsx",
+    "components",
+    "lightweight",
+    "secure",
+    "form",
+    "i18n",
+    "dark-mode",
+    "no-build"
+  ]
+}

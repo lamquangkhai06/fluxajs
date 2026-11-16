@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bảng điều khiển · Fluxa</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../fluxa.css">
+  <style>
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-top: 20px; }
+    .stats .card { margin: 0; }
+    .stat-num { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script src="../dist/fluxa.global.js"></script>
+  <script>
+    // Ứng dụng mẫu 4: bảng điều khiển. Dùng: createI18n (đổi Việt/Anh không tải lại), createTheme, resource + choose
+    // (đang tải / lỗi / xong), Skeleton, Table, Pagination, Progress, Avatar, Alert.
+    const { signal, computed, tags, resource, choose, createI18n, createTheme, persist, mount, h, Button, Table, Pagination, Progress, Avatar, Skeleton, Alert } = Fluxa;
+    const { div, h1, h2, p, span, button } = tags;
+    const theme = createTheme();
+    const i18n = createI18n({
+      vi: { title: "Bảng điều khiển", revenue: "Doanh thu", orders: "Đơn hàng", users: "Người dùng", goal: "Mục tiêu tháng", table: "Đơn hàng gần đây", customer: "Khách hàng", status: "Trạng thái", amount: "Số tiền", loading: "Đang tải số liệu…", reload: "Tải lại", error: "Không tải được dữ liệu", page: "Trang {n}", paid: "Đã thanh toán", pending: "Đang chờ", hello: "{n} đơn đang chờ xử lý" },
+      en: { title: "Dashboard", revenue: "Revenue", orders: "Orders", users: "Users", goal: "Monthly goal", table: "Recent orders", customer: "Customer", status: "Status", amount: "Amount", loading: "Loading data…", reload: "Reload", error: "Could not load data", page: "Page {n}", paid: "Paid", pending: "Pending", hello: "{n} orders waiting" },
+    }, { locale: "vi", persistKey: "vidu-ngonngu" });
+    const t = i18n.text;
+
+    // Dữ liệu giả, mô phỏng gọi máy chủ mất 0,7 giây
+    const fakeApi = () => new Promise((ok) => setTimeout(() => ok({
+      revenue: 128450000, orders: 342, users: 1280, goal: 72,
+      list: Array.from({ length: 17 }, (_, i) => ({ khach: ["An Nguyen", "Binh Tran", "Chi Le", "Dung Pham"][i % 4] + " " + (i + 1), tien: 150000 + ((i * 7919) % 900000), paid: i % 3 !== 0 })),
+    }), 700));
+
+    function App() {
+      const data = resource(fakeApi);
+      const page = signal(1);
+      const SIZE = 5;
+      const pending = () => (data.data() ? data.data().list.filter((o) => !o.paid).length : 0);
+      const stat = (key, value) => div({ class: "card" }, p({ class: "muted" }, t(key)), div({ class: "stat-num" }, value));
+
+      const ready = () => {
+        const d = data.data();
+        const rows = () => d.list.slice((page() - 1) * SIZE, page() * SIZE);
+        return div(
+          h(Alert, { tone: "info" }, () => i18n.t("hello", { n: pending() })),
+          div({ class: "stats" },
+            stat("revenue", () => i18n.n(d.revenue, { style: "currency", currency: i18n.locale() === "vi" ? "VND" : "USD", maximumFractionDigits: 0 })),
+            stat("orders", () => i18n.n(d.orders)),
+            stat("users", () => i18n.n(d.users)),
+            div({ class: "card" }, p({ class: "muted" }, t("goal")), div({ class: "stat-num" }, d.goal + "%"), h(Progress, { value: d.goal, tone: "success", label: "Mục tiêu" })),
+          ),
+          div({ class: "card" },
+            h2(t("table")),
+            h(Table, {
+              rows,
+              columns: [
+                { key: "khach", label: t("customer"), render: (r) => div({ class: "row" }, h(Avatar, { name: r.khach, size: "sm" }), r.khach) },
+                { key: "paid", label: t("status"), render: (r) => span({ class: r.paid ? "badge badge-success" : "badge badge-warning" }, t(r.paid ? "paid" : "pending")) },
+                { key: "tien", label: t("amount"), align: "right", render: (r) => i18n.n(r.tien) },
+              ],
+            }),
+            div({ class: "row mt" }, h(Pagination, { page, pages: Math.ceil(d.list.length / SIZE) }), span({ class: "muted" }, () => i18n.t("page", { n: page() }))),
+          ),
+        );
+      };
+
+      return div({ class: "container" },
+        div({ class: "row" },
+          h1(span("Fluxa"), " · ", t("title")),
+          button({ class: "btn ghost nav-badge", "aria-label": "Ngôn ngữ / Language", onclick: () => i18n.setLocale(i18n.locale() === "vi" ? "en" : "vi") }, () => (i18n.locale() === "vi" ? "EN" : "VI")),
+          button({ class: "btn ghost theme-toggle", "aria-label": "Đổi giao diện sáng/tối", onclick: theme.toggle }, () => (theme.resolved() === "dark" ? "☀" : "🌙")),
+        ),
+        // loading / error / ready: ba trạng thái chỉ bằng một lời gọi choose
+        choose(data.state, {
+          loading: () => div({ class: "card" }, p({ class: "muted" }, t("loading")), h(Skeleton, { lines: 4 })),
+          error: () => h(Alert, { tone: "danger", title: t("error") }, h(Button, { size: "sm", onclick: data.refetch }, t("reload"))),
+          ready,
+        }),
+      );
+    }
+    mount("#app", App);
+  </script>
+</body>
+</html>

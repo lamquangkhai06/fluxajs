@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Việc cần làm · Fluxa</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../fluxa.css">
+</head>
+<body>
+  <div id="app"></div>
+  <script src="../dist/fluxa.global.js"></script>
+  <script>
+    // Ứng dụng mẫu 1: danh sách việc cần làm. Dùng: signal, computed, list, show, model, createStore,
+    // persist (tự lưu vào trình duyệt) và createTheme (sáng/tối).
+    const { signal, computed, tags, list, show, model, createStore, persist, createTheme, mount } = Fluxa;
+    const { div, h1, p, span, button, input, ul, li, label } = tags;
+    const theme = createTheme();
+
+    function App() {
+      // Mỗi việc là một store nhỏ { text, done }: đổi t.done chỉ cập nhật đúng dòng đó
+      const mk = (text, done = false) => createStore({ text, done });
+      const todos = persist(signal([mk("Thử Fluxa", true), mk("Làm ứng dụng của tôi")]), "vidu-todo", {
+        revive: (raw) => raw.slice(0, 500).map((t) => mk(String(t.text).slice(0, 200), !!t.done)), // dữ liệu đọc lại -> store
+        save: (all) => all.map((t) => ({ text: t.text, done: t.done })),                           // store -> dữ liệu thuần
+      });
+      const text = signal("");
+      const filter = signal("all"); // all | todo | done
+
+      const add = () => {
+        const t = text().trim();
+        if (!t) return;
+        todos.set((all) => [...all, mk(t.slice(0, 200))]);
+        text.set("");
+      };
+      const shown = computed(() => todos().filter((t) => filter() === "all" || (filter() === "done") === t.done));
+      const left = computed(() => todos().filter((t) => !t.done).length);
+      const tab = (key, name) => button({ class: () => (filter() === key ? "btn" : "btn ghost"), onclick: () => filter.set(key) }, name);
+
+      return div({ class: "container" },
+        div({ class: "row" },
+          h1(span("Fluxa"), " · Việc cần làm"),
+          button({ class: "btn ghost theme-toggle", "aria-label": "Đổi giao diện sáng/tối", onclick: theme.toggle },
+            () => (theme.resolved() === "dark" ? "☀" : "🌙")),
+        ),
+        div({ class: "card" },
+          div({ class: "row" },
+            input({ class: "input", placeholder: "Thêm việc rồi nhấn Enter…", maxlength: 200, value: text, onkeydown: (e) => e.key === "Enter" && add() }),
+            button({ class: "btn", onclick: add, disabled: () => !text().trim() }, "Thêm"),
+          ),
+          div({ class: "row mt" }, tab("all", "Tất cả"), tab("todo", "Đang làm"), tab("done", "Xong"),
+            span({ class: "badge nav-badge" }, () => `còn ${left()} việc`)),
+          show(() => !shown().length, () => p({ class: "muted" }, "Không có việc nào ở đây.")),
+          ul({ class: "todo" },
+            list(shown, (t) =>
+              li({ class: { done: () => t.done } },
+                input({ type: "checkbox", checked: model(t, "done") }),
+                label(t.text),
+                button({ class: "btn ghost", onclick: () => todos.set((all) => all.filter((x) => x !== t)) }, "Xóa"),
+              )
+            )
+          ),
+          show(() => todos().some((t) => t.done),
+            () => button({ class: "btn ghost mt", onclick: () => todos.set((all) => all.filter((t) => !t.done)) }, "Xóa các việc đã xong")),
+        ),
+        p({ class: "muted" }, "Dữ liệu được lưu trong trình duyệt của bạn: tải lại trang vẫn còn."),
+      );
+    }
+    mount("#app", App);
+  </script>
+</body>
+</html>
